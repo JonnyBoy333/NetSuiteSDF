@@ -77,10 +77,24 @@ export const CustomObjects: CustomObject[] = [
     description: ''
   },
   {
+    label: 'Custom Transaction Types',
+    type: 'customtransactiontype',
+    destination: '/Objects/CustomTransaction',
+    detail: 'customtransaction',
+    description: ''
+  },
+  {
     label: 'Email Capture Plugins',
     type: 'emailcaptureplugin',
     destination: '/Objects/Plugins/Email',
     detail: 'customscript',
+    description: ''
+  },
+  {
+    label: 'Email Template',
+    type: 'emailtemplate',
+    destination: '/Objects/EmailTemplate',
+    detail: 'custemailtmpl',
     description: ''
   },
   {
@@ -126,6 +140,13 @@ export const CustomObjects: CustomObject[] = [
     description: ''
   },
   {
+    label: 'KPI Scorecard',
+    type: 'kpiscorecard',
+    destination: '/Objects/KPIScorecard',
+    detail: 'kpiscorecard',
+    description: ''
+  },
+  {
     label: 'Map Reduce Script',
     type: 'mapreducescript',
     destination: '/Objects/Scripts/MapReduce',
@@ -154,6 +175,13 @@ export const CustomObjects: CustomObject[] = [
     description: ''
   },
   {
+    label: 'Published Dashboard',
+    type: 'publisheddashboard',
+    destination: '/Objects/PublishedDashboard',
+    detail: 'custpubdashboard',
+    description: ''
+  },
+  {
     label: 'Promotions Plugins',
     type: 'promotionsplugin',
     destination: '/Objects/Plugins/Promotions',
@@ -172,6 +200,13 @@ export const CustomObjects: CustomObject[] = [
     type: 'role',
     destination: '/Objects/Roles',
     detail: 'customrole',
+    description: ''
+  },
+  {
+    label: 'Saved CSV Import',
+    type: 'savedcsvimport',
+    destination: '/Objects/SavedCSVImport',
+    detail: 'custimport',
     description: ''
   },
   {
