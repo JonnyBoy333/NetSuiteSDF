@@ -21,6 +21,8 @@ import { SdfCliJson } from './sdf-cli-json';
 import { CLICommand } from './cli-command';
 import { CustomObjects, CustomObject } from './custom-object';
 
+const Bluebird = require('bluebird');
+
 export class NetSuiteSDF {
   activeEnvironment: Environment;
   collectedData: string[] = [];
@@ -87,7 +89,7 @@ export class NetSuiteSDF {
       <frameworkversion>1.0</frameworkversion>
     </manifest>
     `;
-    fs.writeFile(path.join(this.rootPath, 'manifest.xml'), defaultXml, function (
+    fs.writeFile(path.join(this.rootPath, 'manifest.xml'), defaultXml, function(
       err
     ) {
       if (err) throw err;
@@ -132,7 +134,9 @@ export class NetSuiteSDF {
 
     const collectedData = await this.listFiles();
     if (collectedData) {
-      const filteredData = collectedData.filter(data => data.indexOf('SuiteScripts') >= 0);
+      const filteredData = collectedData.filter(
+        data => data.indexOf('SuiteScripts') >= 0
+      );
       if (filteredData.length > 0) {
         const selectedFiles = await vscode.window.showQuickPick(filteredData, {
           canPickMany: true,
@@ -161,12 +165,17 @@ export class NetSuiteSDF {
 
     const collectedData = await this.listObjects();
     if (collectedData) {
-      const filteredData = collectedData.filter(data => data.indexOf('cust') >= 0);
+      const filteredData = collectedData.filter(
+        data => data.indexOf('cust') >= 0
+      );
       if (filteredData.length > 0) {
-        const selectedObjects = await vscode.window.showQuickPick(filteredData, {
-          canPickMany: true,
-          ignoreFocusOut: true
-        });
+        const selectedObjects = await vscode.window.showQuickPick(
+          filteredData,
+          {
+            canPickMany: true,
+            ignoreFocusOut: true
+          }
+        );
         if (selectedObjects && selectedObjects.length > 0) {
           this.createPath(this.currentObject.destination);
           this._importObjects(
@@ -288,6 +297,65 @@ export class NetSuiteSDF {
 
     this.doAddProjectParameter = false;
     this.runCommand(CLICommand.RevokeToken);
+  }
+
+  async getFiles() {
+    await this.getConfig();
+    if (this.sdfConfig) {
+      const files = await this.listFiles();
+      if (files) {
+        vscode.window.showInformationMessage(
+          'Synchronizing SuiteScript folder.'
+        );
+        await this._importFiles(files);
+      }
+    } else {
+      return;
+    }
+  }
+
+  getObjectFunc = (object: CustomObject) => async () => {
+
+    //Saved Searches should not be supported at this time. 
+    if (object.type === 'savedsearch') return;
+
+    this.doAddProjectParameter = false;
+    this.doReturnData = true;
+
+    await this.getConfig();
+    if (this.sdfConfig) {
+      const objects = await this.runCommand(
+        CLICommand.ListObjects,
+        `-type ${object.type}`
+      );
+      if (objects && objects[0] !== 'No custom objects found.') {
+        vscode.window.showInformationMessage('Synchronizing ' + object.label);
+
+        const objectsChunked = _.chunk(objects,10)
+
+        for (let i = 0; i < objectsChunked.length; i++){
+          await this._importObjects(object.type, objectsChunked[i], object.destination);
+        }
+      }
+    }
+  };
+
+  async sync() {
+    if (!this.sdfCliIsInstalled) {
+      vscode.window.showErrorMessage(
+        "'sdfcli' not found in path. Please restart VS Code if you installed it."
+      );
+      return;
+    }
+    await this.getConfig();
+    if (this.sdfConfig) {
+      const objectCommands = _.map(CustomObjects, (object: CustomObject) =>
+        this.getObjectFunc(object)
+      );
+      const allCommands = [this.getFiles.bind(this)].concat(objectCommands);
+      await Bluebird.map(allCommands, func => func(), { concurrency: 5 });
+      vscode.window.showInformationMessage('Synchronization complete!');
+    }
   }
 
   async update() {
@@ -459,7 +527,7 @@ export class NetSuiteSDF {
           } catch (e) {
             vscode.window.showErrorMessage(
               `Unable to parse .sdfcli.json file found at project root: ${
-              this.rootPath
+                this.rootPath
               }`
             );
           }
@@ -470,7 +538,7 @@ export class NetSuiteSDF {
           );
           vscode.window.showErrorMessage(
             `No .sdfcli.json file found at project root: ${
-            this.rootPath
+              this.rootPath
             }. Generated a blank .sdfcli.json template.`
           );
         }
@@ -492,7 +560,11 @@ export class NetSuiteSDF {
     if (line.startsWith('Enter password:')) {
       line = line.substring(15);
     }
-    if (line.includes('You have entered an invalid email address or password. Please try again.')) {
+    if (
+      line.includes(
+        'You have entered an invalid email address or password. Please try again.'
+      )
+    ) {
       this.password = undefined;
       vscode.window.showErrorMessage(
         'Invalid email or password. Be careful! Too many attempts will lock you out!'
@@ -507,7 +579,7 @@ export class NetSuiteSDF {
     stdinSubject: Subject<string>
   ) {
     switch (true) {
-      case (line.includes('Using user credentials.') && this.doSendPassword):
+      case line.includes('Using user credentials.') && this.doSendPassword:
         if (!this.password) {
           await this.resetPassword();
         }
@@ -541,9 +613,11 @@ export class NetSuiteSDF {
 
   async handleStdOut(line: string, command: CLICommand) {
     switch (true) {
+      case line.includes('That record does not exist.'):
+        break;
       case line.includes('does not exist.'):
         vscode.window.showErrorMessage(
-          'Custom record does exist for updating. Please Import Object first.'
+          'Custom record does not exist for updating. Please Import Object first.'
         );
       default:
         break;
@@ -574,7 +648,7 @@ export class NetSuiteSDF {
     const _resetPassword = async () => {
       const prompt = `Please enter your password for your ${
         this.activeEnvironment.name
-        } account.`;
+      } account.`;
       const password = await vscode.window.showInputBox({
         prompt: prompt,
         password: true,
@@ -622,7 +696,8 @@ export class NetSuiteSDF {
 
       this.sdfcli = spawn('sdfcli', commandArray, {
         cwd: this.rootPath,
-        stdin: stdinSubject
+        stdin: stdinSubject,
+        windowsVerbatimArguments: true
       });
 
       this.showStatus();
@@ -641,7 +716,6 @@ export class NetSuiteSDF {
               for (let phrase of endingPhrases) {
                 return line === phrase;
               }
-
             });
             for (let line of lines.slice(0, -1).concat(endingLine)) {
               observer.next(line);
@@ -655,9 +729,8 @@ export class NetSuiteSDF {
 
       const collectedData = await streamWrapper
         .map(line => this.handlePassword(line, command, stdinSubject))
-        .do(
-          line =>
-            this.doShowOutput ? this.outputChannel.append(`${line}\n`) : null
+        .do(line =>
+          this.doShowOutput ? this.outputChannel.append(`${line}\n`) : null
         )
         .do(line => this.handleStdIn(line, command, stdinSubject))
         .do(line => this.handleStdOut(line, command))

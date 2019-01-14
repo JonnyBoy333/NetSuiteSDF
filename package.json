@@ -2,16 +2,21 @@
   "name": "netsuitesdf",
   "displayName": "NetSuiteSDF",
   "description": "Plugin to integrate NetSuite SDF CLI",
-  "version": "0.4.0",
+  "version": "0.4.4",
   "publisher": "markkeaton",
   "license": "MIT",
   "repository": "https://github.com/mark-keaton/NetSuiteSDF",
   "engines": {
-    "vscode": "^1.10.0"
+    "vscode": "^1.1.22"
   },
   "categories": [
     "Other"
   ],
+  "icon": "img/icon.png",
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
   "activationEvents": [
     "workspaceContains:**/.sdf",
     "workspaceContains:**/.sdfcli.json",
@@ -30,6 +35,7 @@
     "onCommand:extension.resetPassword",
     "onCommand:extension.revokeToken",
     "onCommand:extension.selectEnvironment",
+    "onCommand:extension.sync",
     "onCommand:extension.update",
     "onCommand:extension.updateCustomRecordsWithInstances",
     "onCommand:extension.validate"
@@ -223,6 +229,11 @@
         "category": "SDF"
       },
       {
+        "command": "extension.sync",
+        "title": "Run Customization Sync",
+        "category": "SDF"
+      },
+      {
         "command": "extension.update",
         "title": "Update",
         "category": "SDF"
@@ -268,14 +279,15 @@
     "test": "npm run compile && node ./node_modules/vscode/bin/test"
   },
   "dependencies": {
+    "bluebird": "^3.5.3",
     "lodash": "^4.17.11",
     "rxjs": "^5.5.10",
     "spawn-rx": "~2.0.12"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.42",
-    "@types/node": "^7.0.61",
+    "@types/node": "^7.10.2",
     "typescript": "^2.8.1",
-    "vscode": "^1.1.21"
+    "vscode": "^1.1.22"
   }
 }
